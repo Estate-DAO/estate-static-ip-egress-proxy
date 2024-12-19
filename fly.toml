@@ -1,0 +1,14 @@
+# fly.toml app configuration file generated for my-nginx-proxy on 2024-12-19T09:43:34+05:30
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'my-nginx-proxy'
+primary_region = 'ams'
+
+[build]
+
+[[vm]]
+  memory = '512mb'
+  cpu_kind = 'shared'
+  cpus = 1
