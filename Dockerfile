@@ -15,12 +15,12 @@ server {
     listen [::]:8080;
 
     location /test {
-        proxy_pass https://ipv4.icanhazip.com;
-        proxy_ssl_server_name on; # Ensure SNI support
+        proxy_pass http://test.services.travelomatix.com/webservices/index.php/hotel_v3/service;
+        # proxy_ssl_server_name on; # Ensure SNI support
     }
 
-    location /test2 {
-        proxy_pass https://ifconfig.me/ip;
+    location /prod {
+        proxy_pass https://prod.services.travelomatix.com/webservices/index.php/hotel_v3/service;
         proxy_ssl_server_name on; # Ensure SNI support
     }
 }
