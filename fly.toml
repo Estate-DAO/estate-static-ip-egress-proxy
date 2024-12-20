@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for my-nginx-proxy on 2024-12-19T09:43:34+05:30
+# fly.toml app configuration file generated for estate-static-ip-egress-proxy on 2024-12-20T13:59:25+05:30
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'my-nginx-proxy'
+app = 'estate-static-ip-egress-proxy'
 primary_region = 'ams'
 
 [build]
