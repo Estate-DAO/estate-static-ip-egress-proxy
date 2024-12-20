@@ -10,8 +10,9 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v3
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy a docker container to Fly.io
-        run: flyctl deploy --remote-only -c fly.toml
+        run: FLY_API_TOKEN="$FLY_API_TOKEN" flyctl deploy --remote-only -c fly.toml
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_IO_DEPLOY_TOKEN }}
