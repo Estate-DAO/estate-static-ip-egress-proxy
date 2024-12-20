@@ -14,12 +14,14 @@ server {
     listen 8080;
     listen [::]:8080;
 
-    location /test {
+    location /testurl {
+        rewrite ^/testurl(/.*)$ $1 break;
         proxy_pass http://test.services.travelomatix.com/webservices/index.php/hotel_v3/service;
         # proxy_ssl_server_name on; # Ensure SNI support
     }
 
-    location /prod {
+    location /produrl {
+        rewrite ^/produrl(/.*)$ $1 break;
         proxy_pass https://prod.services.travelomatix.com/webservices/index.php/hotel_v3/service;
         proxy_ssl_server_name on; # Ensure SNI support
     }
