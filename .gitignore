@@ -1,1 +1,7 @@
 .env.fly
+Dockerfile_nginx
+fly-personal.toml
+*.log
+*.js
+*.txt
+.env

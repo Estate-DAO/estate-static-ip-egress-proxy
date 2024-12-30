@@ -1,34 +1,38 @@
-# Use official Nginx base image
-FROM nginx:mainline-bookworm
+# Use the official Caddy image as the base image
+FROM caddy:latest
 
-# Set the working directory to /etc/nginx
-WORKDIR /etc/nginx
+RUN cat <<EOF > /etc/caddy/Caddyfile
+{
+    auto_https off
+    default_sni prod.services.travelomatix.com 
+}
 
-# Create sites-available and sites-enabled directories
-RUN mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
 
-RUN cat <<EOF > /etc/nginx/conf.d/fly_run_proxy.conf
-server {
-    server_name _;
+:8080 {
+# Reverse proxy to HTTPS backend
+reverse_proxy  https://prod.services.travelomatix.com  {
+    header_up Host {upstream_hostport}
 
-    listen 8080;
-    listen [::]:8080;
+    # transport http {
+    #     tls_server_name prod.services.travelomatix.com     
+    # }
+}
 
-    location /testurl {
-        rewrite ^/testurl(/.*)$ $1 break;
-        proxy_pass http://test.services.travelomatix.com/webservices/index.php/hotel_v3/service;
-        # proxy_ssl_server_name on; # Ensure SNI support
-    }
+# Rewrite paths by removing "/produrl" prefix
+@rewritePath path_regexp produrl ^/produrl/(.*)$
+rewrite @rewritePath /{http.regexp.produrl.1}
 
-    location /produrl {
-        rewrite ^/produrl(/.*)$ $1 break;
-        proxy_pass https://prod.services.travelomatix.com/webservices/index.php/hotel_v3/service;
-        proxy_ssl_server_name on; # Ensure SNI support
-    }
+log {
+    output stdout
+    format json
+}
+
 }
 EOF
 
+# Expose necessary ports
 EXPOSE 8080
+# EXPOSE 443
+# EXPOSE 443/udp
 
-# Run Nginx in the foreground (required by Docker)
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]
