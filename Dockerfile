@@ -1,38 +1,42 @@
-# Use the official Caddy image as the base image
-FROM caddy:latest
-
-RUN cat <<EOF > /etc/caddy/Caddyfile
-{
-    auto_https off
-    default_sni prod.services.travelomatix.com 
-}
+# Stage 1: Build the Rust application
+FROM rust:1.84.1-slim-bullseye as builder
 
 
-:8080 {
-# Reverse proxy to HTTPS backend
-reverse_proxy  https://prod.services.travelomatix.com  {
-    header_up Host {upstream_hostport}
+# Install musl-tools to enable linking against musl
+RUN apt-get update && apt-get install -y --no-install-recommends musl-tools
 
-    # transport http {
-    #     tls_server_name prod.services.travelomatix.com     
-    # }
-}
+# Set the environment variable to force static linking with OpenSSL
+ENV OPENSSL_STATIC=1
 
-# Rewrite paths by removing "/produrl" prefix
-@rewritePath path_regexp produrl ^/produrl/(.*)$
-rewrite @rewritePath /{http.regexp.produrl.1}
+# Add the musl target to Rust (ensuring a statically linked binary)
+RUN rustup target add x86_64-unknown-linux-musl
 
-log {
-    output stdout
-    format json
-}
+# Set the working directory inside the container to the project folder.
+WORKDIR /usr/src/app
 
-}
-EOF
+# Copy Cargo manifests to leverage Docker’s layer cache.
+COPY axum-example-rev-proxy/Cargo.toml axum-example-rev-proxy/Cargo.lock ./
 
-# Expose necessary ports
-EXPOSE 8080
-# EXPOSE 443
-# EXPOSE 443/udp
+# Copy the remaining source code.
+COPY axum-example-rev-proxy/ .
 
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]
+# Build the application in release mode using the vendored feature.
+RUN cargo build --release --target x86_64-unknown-linux-musl 
+
+
+
+# Stage 2: Create a minimal runtime image
+FROM debian:buster-slim
+RUN apt-get update \
+  && apt-get install -y ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copy the built binary from the builder stage.
+COPY --from=builder /usr/src/app/target/x86_64-unknown-linux-musl/release/axum-example-rev-proxy /usr/local/bin/axum-example-rev-proxy
+
+
+# Expose the port your Axum server listens on 
+EXPOSE 8001
+
+# Run the Axum server.
+CMD ["axum-example-rev-proxy"]

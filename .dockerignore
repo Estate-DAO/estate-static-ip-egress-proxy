@@ -1,3 +1,5 @@
 # flyctl launch added from .gitignore
 **/.env.fly
 fly.toml
+
+./axum-example-rev-proxy/target/
