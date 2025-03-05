@@ -16,7 +16,6 @@ RUST_LOG="debug"
   cpu_kind = 'shared'
   cpus = 1
 
-
 [[services]]
 internal_port = 80
 protocol = "tcp"
