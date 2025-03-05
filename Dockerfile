@@ -38,7 +38,8 @@ COPY --from=builder /usr/src/app/target/x86_64-unknown-linux-musl/release/axum-e
 ENV RUST_LOG=debug
 
 # Expose the port your Axum server listens on 
-EXPOSE 8001
+EXPOSE 80
+# EXPOSE 8001
 
 # Run the Axum server.
 CMD ["axum-example-rev-proxy"]

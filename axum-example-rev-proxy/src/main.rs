@@ -66,7 +66,7 @@ async fn main() {
         .with_state(app_state)
         .layer(trace_layer);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8001").await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:80").await.unwrap();
     info!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
