@@ -17,15 +17,9 @@ RUST_LOG="debug"
   cpus = 1
 
 
-[processes]
-# The command below is used to launch a Rails server; be sure to
-# replace with the command you're using to launch your server.
-web = "./axum-example-rev-proxy"
-
 [[services]]
 internal_port = 80
 protocol = "tcp"
-processes = ["web"]
 http_checks = []
 
 [[services.ports]]
