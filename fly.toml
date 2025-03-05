@@ -15,3 +15,9 @@ RUST_LOG="debug"
   memory = '512mb'
   cpu_kind = 'shared'
   cpus = 1
+
+[[services]]
+
+[[services.ports]]
+    handlers = ["http"]
+    port = 80
