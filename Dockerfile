@@ -34,6 +34,8 @@ RUN apt-get update \
 # Copy the built binary from the builder stage.
 COPY --from=builder /usr/src/app/target/x86_64-unknown-linux-musl/release/axum-example-rev-proxy /usr/local/bin/axum-example-rev-proxy
 
+# Set the RUST_LOG environment variable for logging
+ENV RUST_LOG=debug
 
 # Expose the port your Axum server listens on 
 EXPOSE 8001

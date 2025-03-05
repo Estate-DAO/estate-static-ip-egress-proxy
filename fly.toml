@@ -6,6 +6,9 @@
 app = 'estate-static-ip-egress-proxy'
 primary_region = 'ams'
 
+[env]
+RUST_LOG="debug"
+
 [build]
 
 [[vm]]
