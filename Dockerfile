@@ -3,7 +3,7 @@ FROM rust:1.84.1-slim-bullseye as builder
 
 
 # Install musl-tools to enable linking against musl
-RUN apt-get update && apt-get install -y --no-install-recommends musl-tools
+RUN apt-get update && apt-get install -y --no-install-recommends musl-tools curl
 
 # Set the environment variable to force static linking with OpenSSL
 ENV OPENSSL_STATIC=1
@@ -28,7 +28,7 @@ RUN cargo build --release --target x86_64-unknown-linux-musl
 # Stage 2: Create a minimal runtime image
 FROM debian:buster-slim
 RUN apt-get update \
-  && apt-get install -y ca-certificates \
+  && apt-get install -y ca-certificates curl \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy the built binary from the builder stage.

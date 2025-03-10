@@ -2,18 +2,18 @@ use axum::body::to_bytes;
 use axum::extract::Path;
 use axum::routing::{any, post};
 use axum::{
-    Router,
     body::Body,
     extract::{Request, State},
     http::uri::Uri,
     response::{IntoResponse, Response},
+    Router,
 };
-#[cfg(feature = "debug_response")]
-use flate2::Compression;
 use flate2::read::GzDecoder;
 #[cfg(feature = "debug_response")]
 use flate2::write::GzEncoder;
-use hyper::{StatusCode, header};
+#[cfg(feature = "debug_response")]
+use flate2::Compression;
+use hyper::{header, StatusCode};
 use reqwest;
 use serde::Deserialize;
 use std::io::Read;
@@ -66,9 +66,11 @@ async fn main() {
         .with_state(app_state)
         .layer(trace_layer);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:80").await.unwrap();
-    info!("listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, app).await.unwrap();
+    // Create listener for IPv6
+    let ipv6_listener = tokio::net::TcpListener::bind("[::]:80").await.unwrap();
+    tracing::info!("Listening on IPv6 {}", ipv6_listener.local_addr().unwrap());
+
+    axum::serve(ipv6_listener, app).await.unwrap();
 }
 
 async fn handler(

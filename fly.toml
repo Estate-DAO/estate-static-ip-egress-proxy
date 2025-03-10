@@ -16,12 +16,12 @@ RUST_LOG="debug"
   cpu_kind = 'shared'
   cpus = 1
 
-[[services]]
-internal_port = 80
-protocol = "tcp"
-http_checks = []
+# [[services]]
+# internal_port = 8001
+# protocol = "tcp"
+# http_checks = []
 
-[[services.ports]]
-handlers = ["http"] 
-port = 80
+# [[services.ports]]
+# handlers = ["http"] 
+# port = 80
 
