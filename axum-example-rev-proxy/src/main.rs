@@ -72,8 +72,12 @@ async fn main() {
         .with_state(app_state)
         .layer(trace_layer);
 
+    let port = std::env::var("AXUM_PROXY_PORT")
+        .map(|s| s.parse::<u16>().expect("AXUM_PROXY_PORT must be a u16"))
+        .unwrap_or(80);
+
     // Create listener for IPv6
-    let ipv6_listener = tokio::net::TcpListener::bind("[::]:80").await.unwrap();
+    let ipv6_listener = tokio::net::TcpListener::bind(format!("[::]:{}", port)).await.unwrap();
     tracing::info!("Listening on IPv6 {}", ipv6_listener.local_addr().unwrap());
 
     axum::serve(ipv6_listener, app).await.unwrap();
