@@ -58,12 +58,12 @@ async fn main() {
     let client = Client::builder()
         .dns_resolver(Arc::new(dns_resolver))
         .connection_verbose(true) // Enable verbose connection metrics
-        .timeout(Duration::from_secs(30)) // Overall request timeout
-        .connect_timeout(Duration::from_secs(10)) // Connection timeout
-        .pool_idle_timeout(Duration::from_secs(90)) // Keep connections alive
+        .timeout(Duration::from_secs(15)) // Overall request timeout
+        .connect_timeout(Duration::from_secs(5)) // Connection timeout
+        .pool_idle_timeout(Duration::from_secs(40)) // Keep connections alive
         .pool_max_idle_per_host(10) // Maximum idle connections per host
         .https_only(false) // Allow both HTTP and HTTPS
-        .tcp_keepalive(Duration::from_secs(60)) // TCP keepalive
+        .tcp_keepalive(Duration::from_secs(20)) // TCP keepalive
         .build()
         .expect("Failed to create reqwest client");
 
