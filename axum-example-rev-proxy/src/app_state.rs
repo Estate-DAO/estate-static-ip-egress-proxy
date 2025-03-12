@@ -1,10 +1,10 @@
 use serde::Deserialize;
-use std::env::VarError;
-use thiserror::Error;
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
-use std::time::{SystemTime, Instant};
 use serde::Serialize;
+use std::collections::HashMap;
+use std::env::VarError;
+use std::sync::{Arc, Mutex};
+use std::time::{Instant, SystemTime};
+use thiserror::Error;
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -18,7 +18,7 @@ impl EnvVarConfig {
             // todo add secret when available in gh actions
             ipn_secret: env_w_default("NOWPAYMENTS_IPN_SECRET", "dummy-secret-for-now").unwrap(),
         };
-        
+
         // println!("{value:#?}");
         value
     }
@@ -67,33 +67,39 @@ impl Default for RequestMetrics {
 }
 
 impl RequestMetrics {
-
-    pub fn record_request(&mut self, path: &str, env: &str, status: u16, duration_ms: u64, response_size: usize) {
+    pub fn record_request(
+        &mut self,
+        path: &str,
+        env: &str,
+        status: u16,
+        duration_ms: u64,
+        response_size: usize,
+    ) {
         self.total_requests += 1;
-        
+
         // Record by path
         *self.requests_by_path.entry(path.to_string()).or_insert(0) += 1;
-        
+
         // Record by environment
         *self.env_requests.entry(env.to_string()).or_insert(0) += 1;
-        
+
         // Record by status code
         *self.requests_by_status.entry(status).or_insert(0) += 1;
-        
+
         // Record response size
         self.response_sizes.insert(path.to_string(), response_size);
-        
+
         // Track if successful or failed
         if status >= 200 && status < 400 {
             self.successful_requests += 1;
         } else {
             self.failed_requests += 1;
         }
-        
+
         // Update timing metrics
         self.total_request_time_ms += duration_ms;
         self.avg_request_time_ms = self.total_request_time_ms as f64 / self.total_requests as f64;
-        
+
         // Track slowest request
         if duration_ms > self.slowest_request_time_ms {
             self.slowest_request_time_ms = duration_ms;

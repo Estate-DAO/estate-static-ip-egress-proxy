@@ -1,6 +1,6 @@
 use axum::body::to_bytes;
 use axum::extract::Path;
-use axum::routing::{any, post, get};
+use axum::routing::{any, get, post};
 use axum::{
     body::Body,
     extract::{Request, State},
@@ -11,19 +11,19 @@ use axum::{
 use hyper::{header, StatusCode};
 use reqwest;
 use serde::Deserialize;
-use tower_http::trace::TraceLayer;
-use tracing::{error, info, debug, warn};
 use std::sync::Arc;
 use std::time::Duration;
+use tower_http::trace::TraceLayer;
+use tracing::{debug, error, info, warn};
 
 mod app_state;
+mod dns_resolver;
 mod nowpayments_ipn_webhook;
 mod sort_json;
-mod dns_resolver;
 
 use app_state::AppState;
-use nowpayments_ipn_webhook::nowpayments_webhook;
 use dns_resolver::HickoryDnsResolver;
+use nowpayments_ipn_webhook::nowpayments_webhook;
 
 type Client = reqwest::Client;
 
@@ -45,14 +45,15 @@ async fn main() {
     // Initialize tracing for logging
     tracing_subscriber::fmt::init();
 
-    let trace_layer = TraceLayer::new_for_http().make_span_with(|request: &axum::extract::Request<Body>| {
-        let uri = request.uri().to_string();
-        tracing::info_span!("proxifier_http_request", method = ?request.method(), uri)
-    });
+    let trace_layer =
+        TraceLayer::new_for_http().make_span_with(|request: &axum::extract::Request<Body>| {
+            let uri = request.uri().to_string();
+            tracing::info_span!("proxifier_http_request", method = ?request.method(), uri)
+        });
 
     // Create our custom DNS resolver - for dns caching
     let dns_resolver = HickoryDnsResolver::new();
-    
+
     // Build the reqwest client with our custom resolver and more detailed settings
     let client = Client::builder()
         .dns_resolver(Arc::new(dns_resolver))
@@ -82,7 +83,9 @@ async fn main() {
         .unwrap_or(80);
 
     // Create listener for IPv6
-    let ipv6_listener = tokio::net::TcpListener::bind(format!("[::]:{}", port)).await.unwrap();
+    let ipv6_listener = tokio::net::TcpListener::bind(format!("[::]:{}", port))
+        .await
+        .unwrap();
     tracing::info!("Listening on IPv6 {}", ipv6_listener.local_addr().unwrap());
 
     axum::serve(ipv6_listener, app).await.unwrap();
@@ -99,10 +102,10 @@ async fn health_check() -> Response<Body> {
 /// Endpoint to expose collected metrics
 async fn get_metrics(State(state): State<AppState>) -> Response<Body> {
     let metrics = state.metrics.lock().unwrap();
-    
+
     let uptime = metrics.start_time.elapsed().unwrap_or_default();
     let uptime_secs = uptime.as_secs();
-    
+
     let mut response_body = format!(
         "# PROXY METRICS\n\n## Summary\n\n\
         - Uptime: {}d {}h {}m {}s\n\
@@ -111,7 +114,10 @@ async fn get_metrics(State(state): State<AppState>) -> Response<Body> {
         - Failed Requests: {}\n\
         - Avg Response Time: {:.2}ms\n\
         - Slowest Request: {}ms ({})\n\n",
-        uptime_secs / 86400, (uptime_secs % 86400) / 3600, (uptime_secs % 3600) / 60, uptime_secs % 60,
+        uptime_secs / 86400,
+        (uptime_secs % 86400) / 3600,
+        (uptime_secs % 3600) / 60,
+        uptime_secs % 60,
         metrics.total_requests,
         metrics.successful_requests,
         metrics.failed_requests,
@@ -119,27 +125,25 @@ async fn get_metrics(State(state): State<AppState>) -> Response<Body> {
         metrics.slowest_request_time_ms,
         metrics.slowest_request_path
     );
-    
+
     response_body.push_str("## Environment Usage\n\n");
     for (env, count) in &metrics.env_requests {
         response_body.push_str(&format!("- {}: {}\n", env, count));
     }
-    
+
     response_body.push_str("\n## Status Codes\n\n");
     for (status, count) in &metrics.requests_by_status {
         response_body.push_str(&format!("- {}: {}\n", status, count));
     }
-    
+
     response_body.push_str("\n## Errors\n\n");
     response_body.push_str(&format!(
         "- Connection Errors: {}\n\
         - Timeout Errors: {}\n\
         - DNS Errors: {}\n",
-        metrics.connection_errors,
-        metrics.timeout_errors,
-        metrics.dns_errors
+        metrics.connection_errors, metrics.timeout_errors, metrics.dns_errors
     ));
-    
+
     Response::builder()
         .status(StatusCode::OK)
         .header(header::CONTENT_TYPE, "text/plain")
@@ -214,7 +218,7 @@ async fn handler(
     let body_read_time = network_start.elapsed().as_millis() as u64;
 
     debug!("Time to read request body: {}ms", body_read_time);
-    
+
     if let Ok(bytes) = maybe_body {
         debug!("Request body size: {} bytes", bytes.len());
         request_builder = request_builder.body(bytes);
@@ -240,12 +244,12 @@ async fn handler(
                 warn!("Request failed: {}", e);
                 "other"
             };
-            
+
             // Record the error
             if let Ok(mut metrics) = state.metrics.lock() {
                 metrics.record_error(error_type);
             }
-            
+
             return Err(StatusCode::BAD_GATEWAY);
         }
     };
@@ -253,48 +257,44 @@ async fn handler(
     // Handling the response
     let status = response.status();
     let headers = response.headers().clone();
-    
+
     // Log response headers for debugging
     debug!("Response Status: {}", status);
     debug!("Response Headers: {:?}", headers);
-    
+
     // Read response body and time it
     let body_time_start = Instant::now();
     let body_bytes_result = response.bytes().await;
     let body_time = body_time_start.elapsed().as_millis() as u64;
     debug!("Time to read response body: {}ms", body_time);
-    
+
     let body_bytes = match body_bytes_result {
         Ok(bytes) => bytes,
         Err(e) => {
             error!("Failed to read response body: {}", e);
-            
+
             // Record the error
             if let Ok(mut metrics) = state.metrics.lock() {
                 metrics.record_error("connection");
             }
-            
+
             return Err(StatusCode::BAD_GATEWAY);
         }
     };
-    
+
     let body_size = body_bytes.len();
     debug!("Response body size: {} bytes", body_size);
 
     // Calculate total request time
     let total_time = total_start.elapsed().as_millis() as u64;
-    info!("Total request time: {}ms (network: {}ms, body: {}ms)", 
-         total_time, network_time, body_time);
+    info!(
+        "Total request time: {}ms (network: {}ms, body: {}ms)",
+        total_time, network_time, body_time
+    );
 
     // Record metrics for this request
     if let Ok(mut metrics) = state.metrics.lock() {
-        metrics.record_request(
-            &path,
-            &env,
-            status.as_u16(),
-            total_time,
-            body_size
-        );
+        metrics.record_request(&path, &env, status.as_u16(), total_time, body_size);
     }
 
     // If the `debug_response` feature is enabled, we decode, log, and optionally re-encode.
